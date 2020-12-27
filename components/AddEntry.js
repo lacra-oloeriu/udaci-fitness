@@ -1,13 +1,19 @@
 import React, { Component } from "react";
-import { View ,Text,  TouchableOpacity} from "react-native";
-import { getMetricMetaInfo, timeToString } from "../utils/helpers";
+import { View, Text, TouchableOpacity } from "react-native";
+import {
+  getMetricMetaInfo,
+  timeToString,
+  getDailyReminderValue,
+} from "../utils/helpers";
 import UdaciSliders from "./UdaciSlider";
 import UdaciSteppers from "./UdaciSteppers";
 import DateHeader from "./DateHeader";
 //import { TouchableOpacity } from "react-native-gesture-handler";
 import { Ionicons } from "@expo/vector-icons";
 import TextButton from "./TextButton";
-import { submitEntry, removeEntry } from '../utils/api'
+import { submitEntry, removeEntry } from "../utils/api";
+import { connect } from "react-redux";
+import { addEntry } from "../actions";
 
 function SubmitBtn({ onPress }) {
   return (
@@ -17,7 +23,7 @@ function SubmitBtn({ onPress }) {
   );
 }
 
-export default class AddEntry extends Component {
+class AddEntry extends Component {
   state = {
     run: 0,
     bike: 0,
@@ -26,10 +32,10 @@ export default class AddEntry extends Component {
     eat: 0,
   };
 
-  increment = metric => {
+  increment = (metric) => {
     const { max, step } = getMetricMetaInfo(metric);
 
-    this.setState(state => {
+    this.setState((state) => {
       const count = state[metric] + step;
 
       return {
@@ -39,8 +45,8 @@ export default class AddEntry extends Component {
     });
   };
 
-  decrement = metric => {
-    this.setStat(state => {
+  decrement = (metric) => {
+    this.setState((state) => {
       const count = state[metric] - getMetricMetaInfo(metric).step;
 
       return {
@@ -61,6 +67,11 @@ export default class AddEntry extends Component {
     const entry = this.state;
 
     // Update Redux
+    this.props.dispatch(
+      addEntry({
+        [key]: entry,
+      })
+    );
 
     this.setState(() => ({
       run: 0,
@@ -72,30 +83,31 @@ export default class AddEntry extends Component {
 
     // Navigate to home
 
-    submitEntry({ key, entry })
-
-    
+    submitEntry({ key, entry });
 
     // Clear local notification
   };
   reset = () => {
     const key = timeToString();
-     // Update Redux
+    // Update Redux
+    this.props.dispatch(
+      addEntry({
+        [key]: getDailyReminderValue(),
+      })
+    );
 
     // Route to Home
 
-    removeEntry(key)
-
-    
+    removeEntry(key);
   };
 
   render() {
     const metaInfo = getMetricMetaInfo();
 
-    if (this.props.alreadyLogged)  {
+    if (this.props.alreadyLogged) {
       return (
         <View>
-          <Ionicons name ={"ios-happy"} size={100} />
+          <Ionicons name={"ios-happy"} size={100} />
           <Text>You already logged your information for today.</Text>
           <TextButton onPress={this.reset}>Reset</TextButton>
         </View>
@@ -105,7 +117,7 @@ export default class AddEntry extends Component {
     return (
       <View>
         <DateHeader date={new Date().toLocaleDateString()} />
-        
+
         {Object.keys(metaInfo).map((key) => {
           const { getIcon, type, ...rest } = metaInfo[key];
           const value = this.state[key];
@@ -137,3 +149,13 @@ export default class AddEntry extends Component {
     );
   }
 }
+
+function mapStateToPromps(state) {
+  const key = timeToString();
+
+  return {
+    alreadyLogged: state[key] && typeof state[key].today === "undefined",
+  };
+}
+
+export default connect(mapStateToPromps)(AddEntry);
